@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ template.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f0f2f5;
+        }
+        .main-content {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .header-bar h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .group-header {
+            background-color: #6c757d;
+            color: white;
+            padding: 0.75rem 1.25rem;
+            border-radius: 4px;
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-row {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .item-row:last-child {
+            border-bottom: none;
+        }
+        .item-controls {
+            display: flex;
+            flex-direction: column;
+            margin-right: 1rem;
+        }
+        .item-controls button {
+            margin-bottom: 0.25rem;
+        }
+        .item-details {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            width: 100%;
+            align-items: center;
+        }
+        .footer-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0;
+            margin-top: 2rem;
+        }
+        .footer-buttons button, .footer-buttons a {
+            border-radius: 0;
+            border: none;
+            padding: 1rem;
+            color: white;
+            font-weight: bold;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-publish { background-color: #198754; }
+        .editable {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #2c3e50;">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">Eros</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="{% url 'template_list' %}">Checklist模板</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'checklist_list' %}">Checklist列表</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">数据统计</a></li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">QA专区</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">{{ user.username }}</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="main-content">
+            <form id="template-form" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="header-bar">
+                    <h1 class="{% if is_edit_mode %}editable{% endif %}" data-field="title">{{ template.title }}</h1>
+                    <input type="hidden" name="title" value="{{ template.title }}">
+                    <div>
+                        {% if is_edit_mode %}
+                        <button type="button" id="add-group-btn" class="btn btn-light"><i class="fas fa-plus"></i></button>
+                        {% else %}
+                        <a href="?mode=edit" class="btn btn-primary">编辑模式</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div id="items-container">
+                {% for group_title, items in items_by_group.items %}
+                <div class="group-container" data-group-id="g{{ forloop.counter0 }}">
+                    <div class="group-header">
+                        <span class="{% if is_edit_mode %}editable{% endif %}" data-field="group_title">{{ group_title }}</span>
+                        {% if is_edit_mode %}
+                        <div>
+                            <button type="button" class="btn btn-sm btn-light add-item-btn"><i class="fas fa-plus"></i></button>
+                            <button type="button" class="btn btn-sm btn-light remove-group-btn"><i class="fas fa-minus"></i></button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    {% if is_edit_mode %}<th style="width: 5%;"></th>{% endif %}
+                                    <th style="width: 25%;">确认项</th>
+                                    <th style="width: 40%;">说明</th>
+                                    <th style="width: 30%;">模版图片</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr data-item-id="{{ item.id }}">
+                                    {% if is_edit_mode %}
+                                    <td style="width: 5%;" class="text-center align-middle">
+                                        <div class="item-controls">
+                                            <button type="button" class="btn btn-sm btn-secondary remove-item-btn"><i class="fas fa-minus"></i></button>
+                                        </div>
+                                    </td>
+                                    {% endif %}
+                                    <td style="width: 25%;" class="align-middle {% if is_edit_mode %}editable{% endif %}" data-field="item_title">{{ item.title }}</td>
+                                    <td style="width: 40%;" class="align-middle {% if is_edit_mode %}editable{% endif %}" data-field="item_description">{{ item.description|default_if_none:"" }}</td>
+                                    <td style="width: 30%;" class="align-middle">
+                                        {% if item.image %}
+                                            <img src="{{ item.image.url }}" alt="{{ item.title }}" style="max-width: 100px; max-height: 100px;">
+                                        {% endif %}
+                                        {% if is_edit_mode %}
+                                            <input type="file" class="form-control form-control-sm item-image-input" name="item-{{ item.id }}-image">
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endfor %}
+                </div>
+                
+                <div id="form-data-container" style="display: none;"></div>
+
+                <div class="footer-buttons">
+                    <button type="submit" id="save-btn" class="btn" style="background-color: {% if is_edit_mode %}#ffc107{% else %}#dc3545{% endif %}; color: {% if is_edit_mode %}black{% else %}white{% endif %};" {% if not is_edit_mode %}disabled{% endif %}>保存模板</button>
+                    <a href="{% url 'publish_template' template.id %}" class="btn btn-publish">生成CHECKLIST</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const isEditMode = '{{ is_edit_mode|yesno:"true,false" }}' === 'true';
+        if (!isEditMode) return; // Don't run any script if not in edit mode
+
+        const itemsContainer = document.getElementById('items-container');
+        const form = document.getElementById('template-form');
+        const formDataContainer = document.getElementById('form-data-container');
+        let groupCounter = document.querySelectorAll('.group-container').length;
+
+        // --- Event Listeners ---
+
+        const addGroupBtn = document.getElementById('add-group-btn');
+        if (addGroupBtn) {
+            addGroupBtn.addEventListener('click', function() {
+                const newGroupId = `new-g${groupCounter++}`;
+                const newGroup = createGroupElement('新分组', newGroupId);
+                itemsContainer.appendChild(newGroup);
+            });
+        }
+
+        itemsContainer.addEventListener('click', function(e) {
+            const addBtn = e.target.closest('.add-item-btn');
+            const removeItemBtn = e.target.closest('.remove-item-btn');
+            const removeGroupBtn = e.target.closest('.remove-group-btn');
+
+            if (addBtn) {
+                const groupContainer = addBtn.closest('.group-container');
+                const tbody = groupContainer.querySelector('tbody');
+                const newItem = createItemElement();
+                tbody.appendChild(newItem);
+            } else if (removeItemBtn) {
+                removeItemBtn.closest('tr').remove();
+            } else if (removeGroupBtn) {
+                removeGroupBtn.closest('.group-container').remove();
+            }
+        });
+
+        document.body.addEventListener('click', function(e) {
+            if (e.target.classList.contains('editable')) {
+                makeEditable(e.target);
+            }
+        });
+        
+        if (form) {
+            form.addEventListener('submit', prepareAndSubmitForm);
+        }
+
+        // --- Element Creation Functions ---
+
+        function createGroupElement(title, groupId) {
+            const div = document.createElement('div');
+            div.className = 'group-container';
+            div.dataset.groupId = groupId;
+            div.innerHTML = `
+                <div class="group-header">
+                    <span class="editable" data-field="group_title">${title}</span>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-light add-item-btn"><i class="fas fa-plus"></i></button>
+                        <button type="button" class="btn btn-sm btn-light remove-group-btn"><i class="fas fa-minus"></i></button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%;"></th>
+                                <th style="width: 25%;">确认项</th>
+                                <th style="width: 40%;">说明</th>
+                                <th style="width: 30%;">模版图片</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            `;
+            return div;
+        }
+
+        function createItemElement(item) {
+            const currentItem = item || { id: null, title: '新检查项', description: '' };
+            const tr = document.createElement('tr');
+            if (currentItem.id) {
+                tr.dataset.itemId = currentItem.id;
+            }
+            tr.innerHTML = `
+                <td style="width: 5%;" class="text-center align-middle">
+                    <div class="item-controls">
+                        <button type="button" class="btn btn-sm btn-secondary remove-item-btn"><i class="fas fa-minus"></i></button>
+                    </div>
+                </td>
+                <td style="width: 25%;" class="align-middle editable" data-field="item_title">${currentItem.title}</td>
+                <td style="width: 40%;" class="align-middle editable" data-field="item_description">${currentItem.description}</td>
+                <td style="width: 30%;" class="align-middle">
+                    <input type="file" class="form-control form-control-sm item-image-input">
+                </td>
+            `;
+            return tr;
+        }
+
+        // --- Core Logic Functions ---
+
+        function makeEditable(element) {
+            if (element.querySelector('input')) return; // Already in edit mode
+
+            const currentText = element.textContent.trim();
+            element.innerHTML = ''; // Clear the span
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control';
+            input.value = currentText;
+            
+            element.appendChild(input);
+            input.focus();
+
+            const finishEditing = () => {
+                const newText = input.value.trim();
+                element.textContent = newText;
+            };
+
+            input.addEventListener('blur', finishEditing);
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    finishEditing();
+                }
+            });
+        }
+
+        function prepareAndSubmitForm(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+            // 1. Template Title
+            const templateTitle = document.querySelector('h1.editable').textContent.trim();
+            formData.append('title', templateTitle);
+
+            // 2. Groups and Items
+            const groupElements = itemsContainer.querySelectorAll('.group-container');
+            groupElements.forEach((groupEl, groupIndex) => {
+                const groupTitle = groupEl.querySelector('.group-header .editable').textContent.trim();
+                if (!groupTitle) return;
+
+                const groupPrefix = `group-${groupIndex}`;
+                formData.append(`${groupPrefix}-title`, groupTitle);
+
+                const itemElements = groupEl.querySelectorAll('tbody tr');
+                itemElements.forEach((itemEl, itemIndex) => {
+                    const itemTitle = itemEl.querySelector('[data-field="item_title"]').textContent.trim();
+                    if (!itemTitle) return;
+
+                    const itemPrefix = `item-${groupIndex}-${itemIndex}`;
+                    formData.append(`${itemPrefix}-title`, itemTitle);
+                    
+                    const itemDescription = itemEl.querySelector('[data-field="item_description"]').textContent.trim();
+                    formData.append(`${itemPrefix}-description`, itemDescription);
+
+                    const itemId = itemEl.dataset.itemId;
+                    if (itemId) {
+                        formData.append(`${itemPrefix}-id`, itemId);
+                    }
+
+                    const imageInput = itemEl.querySelector('.item-image-input');
+                    if (imageInput && imageInput.files[0]) {
+                        formData.append(`${itemPrefix}-image`, imageInput.files[0]);
+                    }
+                });
+            });
+
+            // Use fetch to submit the form
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Redirect to the view mode URL, which is the current URL without query parameters
+                    window.location.href = window.location.pathname;
+                } else {
+                    alert('保存失败，请检查控制台获取更多信息。');
+                    response.text().then(text => console.error(text));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('保存时发生错误。');
+            });
+        }
+
+        function createHiddenInput(name, value) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            formDataContainer.appendChild(input);
+        }
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>执行: {{ checklist.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; }
+        .navbar { background-color: #2c3e50; }
+        .navbar-brand, .nav-link { color: #ecf0f1 !important; }
+        .main-content { padding: 2rem; }
+        .group-header {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #6f42c1;
+            padding-bottom: .5rem;
+        }
+        .submit-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem;
+            background-color: #fff;
+            border-top: 1px solid #ddd;
+            box-shadow: 0 -2px 5px rgba(0,0,0,.1);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">Eros</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'template_list' %}">Checklist模板</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'checklist_list' %}">Checklist列表</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">数据统计</a></li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">{{ user.username }}</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container main-content" style="padding-bottom: 100px;">
+        <h2>{{ checklist.title }}</h2>
+        <hr>
+
+        <form action="{% url 'execute_checklist' checklist.id %}" method="post">
+            {% csrf_token %}
+            
+            {% for group_name, items in items_by_group.items %}
+            <div class="group-header">{{ group_name }}</div>
+            <table class="table table-bordered table-hover bg-white">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 5%;"><input type="checkbox" class="form-check-input" onclick="toggleAll(this, '{{ group_name|slugify }}')"></th>
+                        <th style="width: 20%;">确认项</th>
+                        <th style="width: 35%;">说明</th>
+                        <th style="width: 15%;">修改时间</th>
+                        <th style="width: 15%;">修改人</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <input class="form-check-input group-{{ group_name|slugify }}" type="checkbox" name="completed_items" value="{{ item.id }}" {% if item.is_completed %}checked{% endif %}>
+                        </td>
+                        <td>{{ item.title }}</td>
+                        <td>{{ item.description|linebreaksbr }}</td>
+                        <td>{{ item.modified_at|date:"Y/m/d H:i" }}</td>
+                        <td>{{ item.modified_by.username|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% empty %}
+            <div class="alert alert-info">此 Checklist 中暂无项目。</div>
+            {% endfor %}
+
+            <div class="submit-bar">
+                <button type="submit" class="btn btn-danger btn-lg">提 交</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        function toggleAll(source, groupClass) {
+            checkboxes = document.getElementsByClassName('group-' + groupClass);
+            for(var i=0, n=checkboxes.length; i<n; i++) {
+                checkboxes[i].checked = source.checked;
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

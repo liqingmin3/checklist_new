@@ -1,4 +1,4 @@
-# CheckList (Eros)
+# CheckList
 
 CheckList 是一个基于 Django 框架的**检查清单管理系统**，主要用于游戏测试或其他业务流程的标准化检查。
 
